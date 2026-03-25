@@ -1,3 +1,4 @@
+
 # ============================================================
 # STAGE 1 — Build frontend
 # ============================================================
@@ -40,7 +41,7 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # Copy application code
-COPY backend/ .
+COPY backend .
 
 # Remove any __pycache__ carried over from the build context
 RUN find /app -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
@@ -64,13 +65,4 @@ EXPOSE 8000
 # the instance type. Uvicorn workers handle async I/O properly.
 # --timeout 120 gives slow LLM calls room to complete.
 # --graceful-timeout 30 ensures in-flight requests finish before shutdown.
-CMD gunicorn app.main:app \
-    --worker-class uvicorn.workers.UvicornWorker \
-    --workers ${WEB_CONCURRENCY:-2} \
-    --bind 0.0.0.0:${PORT:-8000} \
-    --timeout 120 \
-    --graceful-timeout 30 \
-    --keep-alive 5 \
-    --log-level info \
-    --access-logfile - \
-    --error-logfile -
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

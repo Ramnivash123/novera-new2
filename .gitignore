@@ -1,0 +1,88 @@
+venv312/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Node modules (frontend)
+frontend/node_modules/
+
+# Logs
+logs/
+*.log
+
+# Environment files
+# Keep .env allowed but ignore other variations
+.env.local
+.env.production
+.env.development
+.env.test
+.env.*
+!.env
+.env
+.env.example
+# ===============================
+# ENV & SECRETS
+# ===============================
+.env
+.env.*
+!.env.example
+
+# ===============================
+# PYTHON
+# ===============================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+
+# Virtual environments
+venv/
+venv312/
+.venv/
+
+# ===============================
+# NODE / FRONTEND
+# ===============================
+node_modules/
+dist/
+build/
+.vite/
+.cache/
+
+# ===============================
+# DOCKER
+# ===============================
+*.pid
+docker-data/
+postgres_data/
+
+# ===============================
+# LOGS & RUNTIME
+# ===============================
+logs/
+*.log
+
+# ===============================
+# OS / EDITOR
+# ===============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ===============================
+# TEST / COVERAGE
+# ===============================
+.coverage
+htmlcov/
+pytest_cache/
+
+# ===============================
+# TEMP / BACKUP FILES
+# ===============================
+*.bak
+*.tmp
+*.swp

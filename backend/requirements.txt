@@ -1,0 +1,58 @@
+# ============================================================
+# NOVERA AI — Production Requirements
+# Python 3.11 | Updated & pinned for stability on Render
+# ============================================================
+
+# ── FastAPI Framework ────────────────────────────────────────
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.12
+gunicorn==23.0.0
+
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+pgvector==0.3.6
+alembic==1.14.0
+
+redis[hiredis]==5.2.1
+
+pikepdf==9.4.2
+pymupdf==1.25.1
+python-docx==1.1.2
+openpyxl==3.1.5
+pandas==2.2.3
+pillow==11.0.0
+PyPDF2==3.0.1
+pdfplumber==0.11.4
+
+# before the breaking migration to google-genai package.
+google-generativeai==0.8.3
+
+# Cohere v5 has breaking API changes from v4. Pin to last v4.
+cohere==4.57
+
+# tiktoken for accurate token counting
+tiktoken==0.8.0
+
+# Tenacity for retry logic
+tenacity==9.0.0
+
+httpx==0.28.1
+requests==2.32.3
+
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+python-dotenv==1.0.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+python-dateutil==2.9.0
+loguru==0.7.3
+markdown==3.7
+email-validator==2.2.0
+filetype==1.2.0
+numpy==1.26.4
+reportlab==4.0.7

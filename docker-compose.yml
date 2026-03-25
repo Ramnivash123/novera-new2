@@ -1,0 +1,173 @@
+## ============================================================
+## Novera AI — Local Dev Stack
+##
+## ALL containers, volumes, networks use "novera_" prefix —
+## runs 100% independently from your old mentanova_* setup.
+##
+## Ports (different from mentanova stack):
+##   Postgres → 5433  (not 5432)
+##   Redis    → 6380  (not 6379)
+##   Backend  → 8000
+##   Frontend → 5173
+##   pgAdmin  → 5051  (not 5050)
+##
+## Commands:
+##   docker compose up --build           # first run
+##   docker compose up                   # subsequent runs
+##   docker compose down                 # stop (keeps data)
+##   docker compose down -v              # stop + wipe all data
+##   docker compose --profile tools up   # also starts pgAdmin
+## ============================================================
+
+services:
+
+  # ── PostgreSQL 16 with pgvector ──────────────────────────────
+  novera_postgres:
+    image: pgvector/pgvector:pg16
+    container_name: novera_postgres
+    environment:
+      POSTGRES_USER: novera_user
+      POSTGRES_PASSWORD: novera_pass_2025
+      POSTGRES_DB: novera_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - novera_postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_extensions.sql:/docker-entrypoint-initdb.d/init_extensions.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novera_user -d novera_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - novera_net
+    restart: unless-stopped
+
+  # ── Redis 7 ──────────────────────────────────────────────────
+  novera_redis:
+    image: redis:7-alpine
+    container_name: novera_redis
+    command: redis-server --appendonly yes --requirepass novera_redis_2025
+    ports:
+      - "6380:6379"
+    volumes:
+      - novera_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "novera_redis_2025", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - novera_net
+    restart: unless-stopped
+
+  # ── Backend ──────────────────────────────────────────────────
+  novera_backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: novera_backend
+    # FIX: alembic.ini was using script_location = backend/alembic
+    # which is the repo-root-relative path.  Inside the Docker image
+    # everything from backend/ lands directly in /app, so we must
+    # explicitly pass -c /app/alembic.ini AND ensure script_location
+    # is just "alembic" in that file (handled by the fixed alembic.ini).
+    command: >
+      sh -c "
+        echo '⏳ Waiting for Postgres...' &&
+        until pg_isready -h novera_postgres -U novera_user -d novera_db 2>/dev/null; do
+          sleep 2
+        done &&
+        echo '✅ Postgres ready' &&
+        echo '⚙️  Running Alembic migrations...' &&
+        cd /app && alembic -c /app/alembic.ini upgrade heads &&
+        echo '✅ Migrations done' &&
+        echo '🚀 Starting uvicorn with hot-reload...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+      "
+    env_file:
+      - .env
+    environment:
+      # Override so DB always resolves inside Docker network
+      DATABASE_URL: postgresql+asyncpg://novera_user:novera_pass_2025@novera_postgres:5432/novera_db
+      REDIS_URL: redis://:novera_redis_2025@novera_redis:6379/0
+      POSTGRES_HOST: novera_postgres
+      POSTGRES_PORT: "5432"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app       # hot-reload watches this
+      - novera_uploads:/app/data/uploads
+      - novera_logs:/app/logs
+    depends_on:
+      novera_postgres:
+        condition: service_healthy
+      novera_redis:
+        condition: service_healthy
+    networks:
+      - novera_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/live"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ── Frontend (Vite dev server + HMR) ─────────────────────────
+  novera_frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: novera_frontend
+    environment:
+      VITE_API_URL: ""
+      VITE_APP_NAME: "Novera AI"
+      VITE_APP_VERSION: "1.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - /app/node_modules
+    depends_on:
+      novera_backend:
+        condition: service_healthy
+    networks:
+      - novera_net
+    restart: unless-stopped
+
+  # ── pgAdmin (optional) ────────────────────────────────────────
+  novera_pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: novera_pgadmin
+    profiles:
+      - tools
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@novera.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5051:80"
+    volumes:
+      - novera_pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - novera_postgres
+    networks:
+      - novera_net
+    restart: unless-stopped
+
+networks:
+  novera_net:
+    driver: bridge
+
+volumes:
+  novera_postgres_data:
+  novera_redis_data:
+  novera_uploads:
+  novera_logs:
+  novera_pgadmin_data:

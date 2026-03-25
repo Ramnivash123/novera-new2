@@ -1,0 +1,5 @@
+docker exec -it mentanova_postgres bash
+psql -U mentanova_user -d mentanova_db
+DELETE FROM alembic_version;
+\q
+exit

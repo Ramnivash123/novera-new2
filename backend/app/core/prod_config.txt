@@ -1,0 +1,255 @@
+"""
+Core configuration module using Pydantic settings management.
+PRODUCTION-READY: Supports both Render environment variables and local .env files.
+"""
+from typing import List, Optional, Union
+from pydantic import Field, field_validator, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from functools import lru_cache
+import os
+
+
+class Settings(BaseSettings):
+    """Application settings with validation and type safety."""
+    
+    model_config = SettingsConfigDict(
+        # Load .env file in development, use environment variables in production
+        env_file=".env" if os.getenv("ENVIRONMENT") != "production" else None,
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="allow"
+    )
+    
+    # =========================================================
+    # Application Settings
+    # =========================================================
+    app_name: str = "Mentanova AI Knowledge Assistant"
+    app_version: str = "1.0.0"
+    debug: bool = Field(default=False, validation_alias="DEBUG")
+    environment: str = Field(default="production", validation_alias="ENVIRONMENT")
+    api_v1_prefix: str = "/api/v1"
+    
+    # =========================================================
+    # Server Configuration
+    # =========================================================
+    host: str = "0.0.0.0"
+    port: int = Field(default=8000, validation_alias="PORT")  # Render sets PORT env var
+    workers: int = Field(default=2, validation_alias="WORKERS")
+    
+    # =========================================================
+    # Database Configuration (PRIMARY - Render format)
+    # =========================================================
+    database_url: str = Field(..., validation_alias="DATABASE_URL")
+    database_pool_size: int = Field(default=5, validation_alias="DATABASE_POOL_SIZE")
+    database_max_overflow: int = Field(default=5, validation_alias="DATABASE_MAX_OVERFLOW")
+    
+    # OPTIONAL: Individual PostgreSQL components (for local development)
+    postgres_user: Optional[str] = Field(default=None, validation_alias="POSTGRES_USER")
+    postgres_password: Optional[str] = Field(default=None, validation_alias="POSTGRES_PASSWORD")
+    postgres_db: Optional[str] = Field(default=None, validation_alias="POSTGRES_DB")
+    postgres_host: Optional[str] = Field(default="localhost", validation_alias="POSTGRES_HOST")
+    postgres_port: int = Field(default=5432, validation_alias="POSTGRES_PORT")
+    
+    @computed_field
+    @property
+    def sync_database_url(self) -> str:
+        """
+        Synchronous database URL for Alembic migrations.
+        Converts asyncpg:// to postgresql://
+        """
+        if self.database_url.startswith("postgresql+asyncpg://"):
+            return self.database_url.replace("postgresql+asyncpg://", "postgresql://")
+        elif self.database_url.startswith("postgresql://"):
+            return self.database_url
+        
+        # Fallback: Build from components
+        if all([self.postgres_user, self.postgres_password, self.postgres_db]):
+            return (
+                f"postgresql://{self.postgres_user}:{self.postgres_password}"
+                f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            )
+        
+        raise ValueError("Invalid database configuration")
+    
+    # =========================================================
+    # Redis Configuration
+    # =========================================================
+    redis_url: str = Field(..., validation_alias="REDIS_URL")
+    redis_cache_ttl: int = Field(default=3600, validation_alias="REDIS_CACHE_TTL")
+    
+    # =========================================================
+    # Google Gemini Configuration
+    # =========================================================
+    gemini_api_key: str = Field(..., validation_alias="GEMINI_API_KEY")
+    gemini_embedding_model: str = Field(
+        default="models/text-embedding-004",
+        validation_alias="GEMINI_EMBEDDING_MODEL"
+    )
+    gemini_embedding_dimensions: int = Field(
+        default=1536,
+        validation_alias="GEMINI_EMBEDDING_DIMENSIONS"
+    )
+    gemini_chat_model: str = Field(
+        default="models/gemini-2.0-flash-exp",
+        validation_alias="GEMINI_CHAT_MODEL"
+    )
+    gemini_max_tokens: int = Field(default=8192, validation_alias="GEMINI_MAX_TOKENS")
+    
+    # =========================================================
+    # Cohere Configuration
+    # =========================================================
+    cohere_api_key: str = Field(..., validation_alias="COHERE_API_KEY")
+    cohere_rerank_model: str = Field(
+        default="rerank-english-v3.0",
+        validation_alias="COHERE_RERANK_MODEL"
+    )
+    
+    # =========================================================
+    # JWT Authentication
+    # =========================================================
+    secret_key: str = Field(..., validation_alias="SECRET_KEY")
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+    
+    # =========================================================
+    # File Upload & Processing (Render Disk Paths)
+    # =========================================================
+    max_upload_size_mb: int = 50
+    allowed_extensions: str = "pdf,docx,doc,txt,xlsx,xls"
+    
+    # Use /opt/render/project/data for Render Persistent Disk
+    upload_dir: str = Field(
+        default="/opt/render/project/data/uploads",
+        validation_alias="UPLOAD_DIR"
+    )
+    processed_dir: str = Field(
+        default="/opt/render/project/data/processed",
+        validation_alias="PROCESSED_DIR"
+    )
+    
+    @computed_field
+    @property
+    def allowed_extensions_list(self) -> List[str]:
+        """Parse allowed extensions into a list."""
+        return [ext.strip() for ext in self.allowed_extensions.split(",")]
+    
+    @computed_field
+    @property
+    def max_upload_size_bytes(self) -> int:
+        """Convert MB to bytes."""
+        return self.max_upload_size_mb * 1024 * 1024
+    
+    # =========================================================
+    # Chunking Configuration
+    # =========================================================
+    chunk_size: int = 800
+    chunk_overlap: int = 150
+    max_table_tokens: int = 2000
+    min_chunk_size: int = 100
+    
+    # =========================================================
+    # Retrieval Configuration
+    # =========================================================
+    retrieval_top_k: int = 20
+    rerank_top_k: int = 8
+    similarity_threshold: float = 0.3
+    hybrid_alpha: float = 0.7
+    
+    # =========================================================
+    # Generation Configuration
+    # =========================================================
+    max_context_tokens: int = 12000
+    temperature: float = 0.1
+    max_response_tokens: int = 2000
+    
+    # =========================================================
+    # Guardrails Configuration
+    # =========================================================
+    enable_input_guardrails: bool = True
+    enable_output_guardrails: bool = True
+    hallucination_threshold: float = 0.3
+    
+    # =========================================================
+    # Context Management Configuration
+    # =========================================================
+    context_timeout_hours: int = 1
+    context_max_documents: int = 5
+    context_boost_factor: float = 1.5
+    enable_query_reformulation: bool = True
+    enable_context_ui: bool = True
+    max_conversation_history: int = 2
+    document_scope_message_threshold: int = 5
+    
+    # =========================================================
+    # Logging Configuration
+    # =========================================================
+    log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
+    log_file: str = "/opt/render/project/logs/mentanova.log"
+    log_rotation: str = "10 MB"
+    log_retention: str = "30 days"
+    
+    # =========================================================
+    # CORS Settings (CRITICAL FOR PRODUCTION)
+    # =========================================================
+    cors_origins: Union[str, List[str]] = Field(
+        default="*",  # Will be overridden in production
+        validation_alias="CORS_ORIGINS"
+    )
+    cors_allow_credentials: bool = True
+    
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS origins from string or list."""
+        if isinstance(v, str):
+            if v == "*":
+                return ["*"]
+            v = v.strip('[]"\'')
+            return [origin.strip() for origin in v.split(",")]
+        return v
+    
+    @field_validator("gemini_api_key", "cohere_api_key", "secret_key", mode="after")
+    @classmethod
+    def validate_secrets(cls, v, info):
+        """Ensure critical secrets are not empty or placeholder values."""
+        field_name = info.field_name
+        
+        if not v or len(v) < 10:
+            raise ValueError(f"{field_name} must be at least 10 characters long")
+        
+        # Check for common placeholder patterns
+        placeholder_patterns = ["your-", "placeholder", "xxxxx", "change-me"]
+        if any(pattern in v.lower() for pattern in placeholder_patterns):
+            raise ValueError(f"{field_name} appears to be a placeholder value")
+        
+        return v
+    
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def validate_database_url(cls, v):
+        """Ensure DATABASE_URL uses asyncpg for async operations."""
+        if not v:
+            raise ValueError("DATABASE_URL is required")
+        
+        # Convert standard postgresql:// to asyncpg if needed
+        if v.startswith("postgresql://") and "asyncpg" not in v:
+            # Check if it's a Render internal URL
+            if "dpg-" in v or ".oregon-postgres.render.com" in v:
+                v = v.replace("postgresql://", "postgresql+asyncpg://")
+        
+        if not v.startswith("postgresql+asyncpg://"):
+            raise ValueError("DATABASE_URL must use postgresql+asyncpg:// scheme for async support")
+        
+        return v
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Cached settings singleton."""
+    return Settings()
+
+
+settings = get_settings()
+
+__all__ = ["settings", "get_settings", "Settings"]

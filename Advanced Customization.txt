@@ -1,0 +1,141 @@
+🎨 Testing Advanced Settings
+1. Animation Speed ⚡
+What it does: Controls how fast UI transitions happen (buttons, menus, modals, etc.)
+
+How to test:
+
+Set to "Fast (150ms)"
+
+Click Save
+Go to Chat page
+Open/close the sidebar → Should animate quickly
+Hover over buttons → Quick color transitions
+Set to "Very Slow (700ms)"
+
+Click Save
+Refresh page
+Open/close sidebar → Noticeably slow animation
+Hover over buttons → Slow fade effect
+Expected behavior:
+
+Faster = snappier UI
+Slower = smoother, more visible transitions
+2. Enable Animations ✨
+What it does: Turns all animations on/off globally
+
+How to test:
+
+Uncheck "Enable Animations"
+
+Click Save
+Reload page
+Open sidebar → Should appear instantly (no slide animation)
+Hover buttons → No transition effects
+Modals open instantly
+Check "Enable Animations"
+
+Click Save
+Reload page
+Everything should animate smoothly
+Expected behavior:
+
+Disabled = Instant changes (better for accessibility/performance)
+Enabled = Smooth transitions
+3. Dark Mode Support 🌙
+What it does: Enables automatic dark color variants
+
+How to test:
+
+Check "Enable Dark Mode Support"
+
+Click Save
+Change your system to dark mode:
+Windows: Settings → Personalization → Colors → Dark
+Mac: System Preferences → General → Appearance → Dark
+Reload the app
+Colors should automatically adjust to dark variants
+Uncheck it
+
+Click Save
+System dark mode won't affect the app
+Expected behavior:
+
+Enabled + System Dark Mode = Dark color scheme
+Disabled = Always uses your set colors
+Note: Currently this might not work fully since dark mode implementation requires the CustomizationContext to apply dark variants. If it doesn't work, that's expected - it's marked as "Beta".
+
+4. Custom CSS 🎨
+What it does: Lets you add custom styling to override anything
+
+How to test:
+
+Add this CSS:
+
+CSS
+
+/* Make all buttons glow */
+button {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5) !important;
+  transition: all 0.3s !important;
+}
+
+button:hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.8) !important;
+}
+Click Save
+
+Reload page
+
+Hover over any button → Should glow and grow slightly
+
+More test examples:
+
+CSS
+
+/* Change sidebar background to gradient */
+aside {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* Make cards more rounded */
+.card {
+  border-radius: 24px !important;
+}
+
+/* Custom font for headings */
+h1, h2, h3 {
+  font-family: 'Georgia', serif !important;
+  color: #8b5cf6 !important;
+}
+Expected behavior:
+
+Any valid CSS should override default styles
+Bad CSS is ignored
+Use !important to force overrides
+5. Theme Name 🏷️
+What it does: Names your custom theme (metadata only)
+
+How to test:
+
+Enter: "My Awesome Theme"
+Click Save
+Check database or API response → Should show your theme name
+Where it's used:
+
+Internal reference
+Future: Theme export/import feature
+Admin dashboard theme list
+6. Theme Description 📝
+What it does: Describes your theme (metadata only)
+
+How to test:
+
+Enter: "A vibrant theme with blue and purple gradients"
+Click Save
+Check API response → Should save the description
+Where it's used:
+
+Documentation
+Future: Theme marketplace/sharing
+Admin notes

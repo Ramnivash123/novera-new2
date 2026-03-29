@@ -74,7 +74,7 @@ class Document(Base):
     __table_args__ = (
         Index('idx_doc_type_dept', 'doc_type', 'department'),
         Index('idx_status_upload', 'status', 'upload_date'),
-        Index('idx_metadata_gin', 'metadata', postgresql_using='gin'),
+        Index('idx_metadata_gin', doc_metadata, postgresql_using='gin'),
         Index('idx_org_status', 'organization_id', 'status'),
     )
 
@@ -144,7 +144,7 @@ class Chunk(Base):
             postgresql_with={'lists': 100},
             postgresql_ops={'embedding': 'vector_cosine_ops'}
         ),
-        Index('idx_chunk_metadata_gin', 'metadata', postgresql_using='gin'),
+        Index('idx_chunk_metadata_gin', chunk_metadata, postgresql_using='gin'),
         Index(
             'idx_content_fts',
             'content',

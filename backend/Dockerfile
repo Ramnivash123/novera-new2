@@ -65,4 +65,4 @@ EXPOSE 8000
 # the instance type. Uvicorn workers handle async I/O properly.
 # --timeout 120 gives slow LLM calls room to complete.
 # --graceful-timeout 30 ensures in-flight requests finish before shutdown.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
